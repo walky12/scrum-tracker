@@ -4,7 +4,7 @@ import pandas as pd
 from datetime import date
 
 st.set_page_config(page_title="Responsibility Tracker", layout="wide")
-st.title("📌 Daily Scrum Responsibility Tracker")
+st.title("📌 Responsibility Tracker")
 st.caption("Track action items and delegated tasks so nothing gets forgotten over time.")
 
 # Function to get connection using your Streamlit secrets
