@@ -3,13 +3,14 @@ import psycopg2
 import pandas as pd
 from datetime import date
 
-st.title("Scrum Tracker")
+st.set_page_config(page_title="Scrum Tracker", layout="wide")
+st.title("🎯 Scrum Tracker Dashboard")
 
 # Function to get connection using your Streamlit secrets
 def get_connection():
     return psycopg2.connect(st.secrets["supabase"]["connection_string"])
 
-# 1. Ensure table includes assigned_by, assigned_person, area_responsibility, and task_date
+# 1. Ensure table structure exists
 try:
     conn = get_connection()
     cur = conn.cursor()
@@ -30,35 +31,55 @@ try:
 except Exception as e:
     st.error(f"Table setup failed: {e}")
 
-# 2. Form to Add a New Task
-st.subheader("Add a New Scrum Task")
-with st.form("task_form"):
-    task_name = st.text_input("Task Description")
-    assigned_by = st.text_input("Assigned By")
-    assigned_person = st.text_input("Assigned To")
-    area_responsibility = st.text_input("Area of Responsibility")
-    task_date = st.date_input("Date", value=date.today())
-    status = st.selectbox("Status", ["To Do", "In Progress", "Done"])
-    submit_button = st.form_submit_button("Add Task")
+# Initialize session state for clearing form inputs if needed
+if "form_submitted" not in st.session_state:
+    st.session_state.form_submitted = False
 
-    if submit_button and task_name:
-        try:
-            conn = get_connection()
-            cur = conn.cursor()
-            cur.execute(
-                "INSERT INTO scrum_tasks (task_name, assigned_by, assigned_person, area_responsibility, task_date, status) VALUES (%s, %s, %s, %s, %s, %s);",
-                (task_name, assigned_by, assigned_person, area_responsibility, task_date, status)
-            )
-            conn.commit()
-            cur.close()
-            conn.close()
-            st.success(f"Added task: '{task_name}' successfully!")
-            st.rerun()
-        except Exception as e:
-            st.error(f"Failed to insert data: {e}")
+# 2. Compact and Clean Add Task Form inside an Expander or Container
+with st.container():
+    st.subheader("➕ Add a New Sprint Task")
+    
+    with st.form("task_form", clear_on_submit=True):
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            task_name = st.text_input("Task Description")
+            assigned_by = st.text_input("Assigned By")
+            assigned_person = st.text_input("Assigned To")
+            
+        with col2:
+            area_responsibility = st.text_input("Area of Responsibility")
+            task_date = st.date_input("Date", value=date.today())
+            status = st.selectbox("Status", ["To Do", "In Progress", "Done"])
+            
+        submit_button = st.form_submit_button("Add Task to Database", use_container_width=True)
 
-# 3. View, Edit, Modify, and Delete Data
-st.subheader("Current Sprint Tasks (Edit / Delete)")
+        if submit_button:
+            if task_name.strip():
+                try:
+                    conn = get_connection()
+                    cur = conn.cursor()
+                    cur.execute(
+                        """INSERT INTO scrum_tasks 
+                           (task_name, assigned_by, assigned_person, area_responsibility, task_date, status) 
+                           VALUES (%s, %s, %s, %s, %s, %s);""",
+                        (task_name, assigned_by, assigned_person, area_responsibility, task_date, status)
+                    )
+                    conn.commit()
+                    cur.close()
+                    conn.close()
+                    st.success(f"Successfully added task: '{task_name}'!")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Failed to insert data: {e}")
+            else:
+                st.warning("Please fill out the Task Description before submitting.")
+
+st.markdown("---")
+
+# 3. View, Edit, Modify, and Delete Data Section
+st.subheader("📋 Current Sprint Tasks (Live Editor)")
+st.caption("You can click directly on cells to edit them, modify statuses, or delete rows using the row selector, then click **Save Changes to Database** below.")
 
 try:
     conn = get_connection()
@@ -75,7 +96,7 @@ try:
             hide_index=True
         )
 
-        if st.button("Save Changes to Database"):
+        if st.button("💾 Save Changes to Database", type="primary"):
             conn = get_connection()
             cur = conn.cursor()
             try:
@@ -99,7 +120,7 @@ try:
                             (row['task_name'], row['assigned_by'], row['assigned_person'], row['area_responsibility'], row['task_date'], row['status'], int(row['id']))
                         )
                     elif pd.isna(row['id']) or row['id'] == '':
-                        # Insert new row added directly inside the editor
+                        # Insert new row added directly inside the editor table
                         if row['task_name']:
                             cur.execute(
                                 """INSERT INTO scrum_tasks (task_name, assigned_by, assigned_person, area_responsibility, task_date, status) 
@@ -110,7 +131,7 @@ try:
                 conn.commit()
                 cur.close()
                 conn.close()
-                st.success("Changes saved successfully to Supabase!")
+                st.success("All changes saved successfully to Supabase!")
                 st.rerun()
             except Exception as e:
                 conn.rollback()
@@ -118,7 +139,7 @@ try:
                 conn.close()
                 st.error(f"Failed to update database: {e}")
     else:
-        st.info("No tasks found. Add a task above to get started!")
+        st.info("No tasks found yet. Use the form above to add your first sprint task!")
 
 except Exception as e:
     st.error(f"Failed to load data: {e}")
