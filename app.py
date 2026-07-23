@@ -5,7 +5,7 @@ from datetime import date
 
 st.set_page_config(page_title="Responsibility Tracker", layout="wide")
 st.title("📌 Daily Scrum Responsibility Tracker")
-st.caption("Track action items, follow-ups, and assignments delegated during daily scrums so nothing gets forgotten after weeks or months.")
+st.caption("Track action items and delegated tasks so nothing gets forgotten over time.")
 
 # Function to get connection using your Streamlit secrets
 def get_connection():
@@ -32,7 +32,7 @@ try:
 except Exception as e:
     st.error(f"Table setup failed: {e}")
 
-# 2. Compact Form to Add a New Responsibility Item
+# 2. Clean Form to Add New Responsibility Item
 with st.container():
     st.subheader("➕ Add New Responsibility Item")
     
@@ -74,9 +74,9 @@ with st.container():
 
 st.markdown("---")
 
-# 3. View, Edit, Modify, and Delete Data Section
+# 3. View, Edit, and Delete Existing Data Section
 st.subheader("📋 Tracked Responsibilities & Follow-ups")
-st.caption("Review long-term assignments here. You can click directly on cells to update statuses, edit descriptions, or remove items, then click **Save Changes to Database**.")
+st.caption("Update statuses or edit details directly in the table below, then click **Save Changes to Database**.")
 
 try:
     conn = get_connection()
@@ -84,10 +84,18 @@ try:
     conn.close()
 
     if not df.empty:
-        # Use st.data_editor to allow inline modifications, updates, and row deletions
+        # Configure data editor with a dropdown for status and num_rows="fixed" to remove the `+` button at the bottom
         edited_df = st.data_editor(
             df,
-            num_rows="dynamic",
+            num_rows="fixed",
+            column_config={
+                "status": st.column_config.SelectboxColumn(
+                    "Status",
+                    help="Update the status of the responsibility",
+                    options=["Open", "In Progress", "Completed", "Pending Review"],
+                    required=True
+                )
+            },
             key="scrum_editor",
             use_container_width=True,
             hide_index=True
@@ -106,24 +114,15 @@ try:
                 for del_id in deleted_ids:
                     cur.execute("DELETE FROM scrum_tasks WHERE id = %s;", (int(del_id),))
 
-                # Update modified or add new rows
+                # Update modified rows
                 for _, row in edited_df.iterrows():
                     if pd.notna(row['id']) and int(row['id']) in original_ids:
-                        # Update existing row
                         cur.execute(
                             """UPDATE scrum_tasks 
                                SET task_name = %s, assigned_by = %s, assigned_person = %s, area_responsibility = %s, task_date = %s, status = %s 
                                WHERE id = %s;""",
                             (row['task_name'], row['assigned_by'], row['assigned_person'], row['area_responsibility'], row['task_date'], row['status'], int(row['id']))
                         )
-                    elif pd.isna(row['id']) or row['id'] == '':
-                        # Insert new row added directly inside the editor table
-                        if row['task_name']:
-                            cur.execute(
-                                """INSERT INTO scrum_tasks (task_name, assigned_by, assigned_person, area_responsibility, task_date, status) 
-                                   VALUES (%s, %s, %s, %s, %s, %s);""",
-                                (row['task_name'], row['assigned_by'], row['assigned_person'], row['area_responsibility'], row['task_date'], row['status'])
-                            )
 
                 conn.commit()
                 cur.close()
@@ -136,7 +135,7 @@ try:
                 conn.close()
                 st.error(f"Failed to update database: {e}")
     else:
-        st.info("No responsibility items tracked yet. Use the form above to add your first daily scrum item!")
+        st.info("No responsibility items tracked yet. Use the form above to add your first item!")
 
 except Exception as e:
     st.error(f"Failed to load data: {e}")
