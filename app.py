@@ -4,8 +4,8 @@ import psycopg2
 st.title("Scrum Tracker Debug Mode")
 
 def get_connection():
-    # This pulls the exact string you saved in Streamlit Cloud Secrets
-    return psycopg2.connect(st.secrets["supabase"]["postgresql://postgres:Flask@747412@db.xpifntjiohkaucensrpu.supabase.co:5432/postgres"])
+    # Correctly reference the section and the key name
+    return psycopg2.connect(st.secrets["supabase"]["connection_string"])
 
 try:
     conn = get_connection()
