@@ -9,7 +9,7 @@ st.title("Scrum Tracker")
 def get_connection():
     return psycopg2.connect(st.secrets["supabase"]["connection_string"])
 
-# 1. Ensure table includes assigned_person, area_responsibility, and task_date
+# 1. Ensure table includes assigned_by, assigned_person, area_responsibility, and task_date
 try:
     conn = get_connection()
     cur = conn.cursor()
@@ -17,6 +17,7 @@ try:
         CREATE TABLE IF NOT EXISTS scrum_tasks (
             id SERIAL PRIMARY KEY,
             task_name TEXT NOT NULL,
+            assigned_by TEXT,
             assigned_person TEXT,
             area_responsibility TEXT,
             task_date DATE,
@@ -33,6 +34,7 @@ except Exception as e:
 st.subheader("Add a New Scrum Task")
 with st.form("task_form"):
     task_name = st.text_input("Task Description")
+    assigned_by = st.text_input("Assigned By")
     assigned_person = st.text_input("Assigned To")
     area_responsibility = st.text_input("Area of Responsibility")
     task_date = st.date_input("Date", value=date.today())
@@ -44,8 +46,8 @@ with st.form("task_form"):
             conn = get_connection()
             cur = conn.cursor()
             cur.execute(
-                "INSERT INTO scrum_tasks (task_name, assigned_person, area_responsibility, task_date, status) VALUES (%s, %s, %s, %s, %s);",
-                (task_name, assigned_person, area_responsibility, task_date, status)
+                "INSERT INTO scrum_tasks (task_name, assigned_by, assigned_person, area_responsibility, task_date, status) VALUES (%s, %s, %s, %s, %s, %s);",
+                (task_name, assigned_by, assigned_person, area_responsibility, task_date, status)
             )
             conn.commit()
             cur.close()
@@ -60,7 +62,7 @@ st.subheader("Current Sprint Tasks (Edit / Delete)")
 
 try:
     conn = get_connection()
-    df = pd.read_sql("SELECT id, task_name, assigned_person, area_responsibility, task_date, status FROM scrum_tasks ORDER BY id ASC;", conn)
+    df = pd.read_sql("SELECT id, task_name, assigned_by, assigned_person, area_responsibility, task_date, status FROM scrum_tasks ORDER BY id ASC;", conn)
     conn.close()
 
     if not df.empty:
@@ -92,17 +94,17 @@ try:
                         # Update existing row
                         cur.execute(
                             """UPDATE scrum_tasks 
-                               SET task_name = %s, assigned_person = %s, area_responsibility = %s, task_date = %s, status = %s 
+                               SET task_name = %s, assigned_by = %s, assigned_person = %s, area_responsibility = %s, task_date = %s, status = %s 
                                WHERE id = %s;""",
-                            (row['task_name'], row['assigned_person'], row['area_responsibility'], row['task_date'], row['status'], int(row['id']))
+                            (row['task_name'], row['assigned_by'], row['assigned_person'], row['area_responsibility'], row['task_date'], row['status'], int(row['id']))
                         )
                     elif pd.isna(row['id']) or row['id'] == '':
                         # Insert new row added directly inside the editor
                         if row['task_name']:
                             cur.execute(
-                                """INSERT INTO scrum_tasks (task_name, assigned_person, area_responsibility, task_date, status) 
-                                   VALUES (%s, %s, %s, %s, %s);""",
-                                (row['task_name'], row['assigned_person'], row['area_responsibility'], row['task_date'], row['status'])
+                                """INSERT INTO scrum_tasks (task_name, assigned_by, assigned_person, area_responsibility, task_date, status) 
+                                   VALUES (%s, %s, %s, %s, %s, %s);""",
+                                (row['task_name'], row['assigned_by'], row['assigned_person'], row['area_responsibility'], row['task_date'], row['status'])
                             )
 
                 conn.commit()
