@@ -3,28 +3,11 @@ import psycopg2
 
 st.title("Scrum Tracker")
 
-# Function to get connection using your secrets
+# Function to get connection using your Streamlit secrets
 def get_connection():
     return psycopg2.connect(st.secrets["supabase"]["connection_string"])
 
-# 1. Ensure a table exists to store your scrum tasks
-try:
-    conn = get_connection()
-    cur = conn.cursor()
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS scrum_tasks (
-            id SERIAL PRIMARY KEY,
-            task_name TEXT NOT NULL,
-            status TEXT NOT NULL
-        );
-    """)
-    conn.commit()
-    cur.close()
-    conn.close()
-except Exception as e:
-    st.error(f"Table creation failed: {e}")
-
-# 2. Form to Add Data
+# 1. Form to Add New Data
 st.subheader("Add a New Scrum Task")
 with st.form("task_form"):
     task_name = st.text_input("Task Description")
@@ -47,7 +30,7 @@ with st.form("task_form"):
         except Exception as e:
             st.error(f"Failed to insert data: {e}")
 
-# 3. View/Query Data from Supabase
+# 2. View/Query Data from Supabase
 st.subheader("Current Sprint Tasks")
 try:
     conn = get_connection()
