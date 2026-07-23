@@ -3,8 +3,9 @@ import psycopg2
 import pandas as pd
 from datetime import date
 
-st.set_page_config(page_title="Scrum Tracker", layout="wide")
-st.title("🎯 Scrum Tracker Dashboard")
+st.set_page_config(page_title="Responsibility Tracker", layout="wide")
+st.title("📌 Daily Scrum Responsibility Tracker")
+st.caption("Track action items, follow-ups, and assignments delegated during daily scrums so nothing gets forgotten after weeks or months.")
 
 # Function to get connection using your Streamlit secrets
 def get_connection():
@@ -31,28 +32,24 @@ try:
 except Exception as e:
     st.error(f"Table setup failed: {e}")
 
-# Initialize session state for clearing form inputs if needed
-if "form_submitted" not in st.session_state:
-    st.session_state.form_submitted = False
-
-# 2. Compact and Clean Add Task Form inside an Expander or Container
+# 2. Compact Form to Add a New Responsibility Item
 with st.container():
-    st.subheader("➕ Add a New Sprint Task")
+    st.subheader("➕ Add New Responsibility Item")
     
     with st.form("task_form", clear_on_submit=True):
         col1, col2 = st.columns(2)
         
         with col1:
-            task_name = st.text_input("Task Description")
-            assigned_by = st.text_input("Assigned By")
+            task_name = st.text_input("Responsibility / Action Item Description")
+            assigned_by = st.text_input("Assigned By (e.g., Arjun)")
             assigned_person = st.text_input("Assigned To")
             
         with col2:
             area_responsibility = st.text_input("Area of Responsibility")
-            task_date = st.date_input("Date", value=date.today())
-            status = st.selectbox("Status", ["To Do", "In Progress", "Done"])
+            task_date = st.date_input("Date Assigned", value=date.today())
+            status = st.selectbox("Status", ["Open", "In Progress", "Completed", "Pending Review"])
             
-        submit_button = st.form_submit_button("Add Task to Database", use_container_width=True)
+        submit_button = st.form_submit_button("Save Responsibility Item", use_container_width=True)
 
         if submit_button:
             if task_name.strip():
@@ -68,18 +65,18 @@ with st.container():
                     conn.commit()
                     cur.close()
                     conn.close()
-                    st.success(f"Successfully added task: '{task_name}'!")
+                    st.success("Successfully recorded responsibility item!")
                     st.rerun()
                 except Exception as e:
                     st.error(f"Failed to insert data: {e}")
             else:
-                st.warning("Please fill out the Task Description before submitting.")
+                st.warning("Please fill out the responsibility description before submitting.")
 
 st.markdown("---")
 
 # 3. View, Edit, Modify, and Delete Data Section
-st.subheader("📋 Current Sprint Tasks (Live Editor)")
-st.caption("You can click directly on cells to edit them, modify statuses, or delete rows using the row selector, then click **Save Changes to Database** below.")
+st.subheader("📋 Tracked Responsibilities & Follow-ups")
+st.caption("Review long-term assignments here. You can click directly on cells to update statuses, edit descriptions, or remove items, then click **Save Changes to Database**.")
 
 try:
     conn = get_connection()
@@ -131,7 +128,7 @@ try:
                 conn.commit()
                 cur.close()
                 conn.close()
-                st.success("All changes saved successfully to Supabase!")
+                st.success("Changes saved successfully to Supabase!")
                 st.rerun()
             except Exception as e:
                 conn.rollback()
@@ -139,7 +136,7 @@ try:
                 conn.close()
                 st.error(f"Failed to update database: {e}")
     else:
-        st.info("No tasks found yet. Use the form above to add your first sprint task!")
+        st.info("No responsibility items tracked yet. Use the form above to add your first daily scrum item!")
 
 except Exception as e:
     st.error(f"Failed to load data: {e}")
